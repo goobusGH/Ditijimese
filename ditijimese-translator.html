@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditijimese Translator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f2ff;
+      --panel: #ffffff;
+      --text: #29213d;
+      --muted: #706783;
+      --accent: #7957c8;
+      --accent-hover: #6241ad;
+      --border: #e5dcf8;
+      --soft: #f0eaff;
+      --output: #fbf9ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px 16px 48px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 1000px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 28px; }
+    h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3rem); }
+    header p { color: var(--muted); margin: 0; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      margin: 16px 0;
+      box-shadow: 0 5px 20px rgba(65, 42, 112, 0.05);
+    }
+    h2 { margin: 0 0 12px; font-size: 1.25rem; }
+    label { display: block; font-weight: 700; margin-bottom: 8px; }
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      resize: vertical;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--output);
+      color: var(--text);
+      font: inherit;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    textarea:focus { outline: 3px solid #d8c9ff; border-color: var(--accent); }
+    .output {
+      min-height: 130px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--output);
+      line-height: 1.9;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      font-size: 1.08rem;
+    }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 15px;
+      background: var(--accent);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: var(--soft); color: var(--text); }
+    button.secondary:hover { background: #e5d9ff; }
+    .hint, .status { color: var(--muted); font-size: .92rem; }
+    .status { min-height: 1.3em; margin-top: 8px; }
+    .vowels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .vowel {
+      padding: 12px 6px;
+      text-align: center;
+      border: 1px solid var(--border);
+      background: var(--soft);
+      border-radius: 10px;
+      font-weight: 800;
+    }
+    .family-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 12px; }
+    .family {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px;
+      min-width: 0;
+    }
+    .family h3 { margin: 0 0 9px; font-size: 1rem; }
+    .family p { margin: 6px 0; font-size: .9rem; }
+    .family strong { color: var(--accent); }
+    .family small { color: var(--muted); display: block; margin-top: 7px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .legend span { background: var(--soft); border-radius: 8px; padding: 7px 9px; font-size: .88rem; }
+    details summary { cursor: pointer; font-weight: 700; }
+    footer { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 24px; }
+    @media (max-width: 520px) {
+      body { padding: 18px 10px 32px; }
+      .panel { padding: 15px; }
+      .vowels { gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ditijimese Translator</h1>
+    <p>A first prototype for the Ditijimese writing system</p>
+  </header>
+
+  <section class="panel">
+    <label for="source">Type romanised Ditijimese</label>
+    <textarea id="source" spellcheck="false" placeholder="Try: ka ku ko ki ke&#10;ga sha kya pya&#10;aa uu oo ii ee"></textarea>
+    <p class="hint">Conversion happens as you type. Unrecognised letters and punctuation are kept as-is.</p>
+    <div class="actions">
+      <button id="copy" type="button">Copy translation</button>
+      <button id="clear" class="secondary" type="button">Clear</button>
+      <button id="example" class="secondary" type="button">Load example</button>
+    </div>
+    <p id="status" class="status" aria-live="polite"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Translation</h2>
+    <div id="result" class="output" aria-live="polite"></div>
+    <p class="hint">Bracketed labels are placeholders. Later, we can replace each one with your designed glyphs.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Vowels</h2>
+    <div class="vowels">
+      <div class="vowel">A</div><div class="vowel">U</div><div class="vowel">O</div>
+      <div class="vowel">I</div><div class="vowel">E</div>
+    </div>
+    <div class="legend">
+      <span><strong>aa</strong> → [A—]</span>
+      <span><strong>uu</strong> → [U—]</span>
+      <span><strong>oo</strong> → [O—]</span>
+      <span><strong>ii</strong> → [I—]</span>
+      <span><strong>ee</strong> → [E—]</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Consonant reference</h2>
+    <p class="hint">Each entry shows the family’s romanisation pattern. A dash means that modification level is not defined in your table.</p>
+    <div id="reference" class="family-grid"></div>
+  </section>
+
+  <footer>Ditijimese Translator · Prototype v1</footer>
+</main>
+
+<script>
+  // Vowel order supplied for Ditijimese: A, U, O, I, E.
+  const VOWELS = ["a", "u", "o", "i", "e"];
+
+  // Each populated table cell is a family of consonant-vowel syllables.
+  // Sound labels disambiguate spellings such as ja (zh/dj), ca (k/s), xa (z/gz).
+  const FAMILIES = [
+    { name: "K family", base: "k", levels: [
+      { label: "Base", stem: "k" },
+      { label: "Dakuten", stem: "g" },
+      null,
+      { label: "Tridakuten", stem: "ky" },
+      { label: "Quadakuten", stem: "gy" },
+      null
+    ]},
+    { name: "S family", base: "s", levels: [
+      { label: "Base", stem: "s" },
+      { label: "Dakuten", stem: "z" },
+      { label: "Duodakuten", stem: "sh" },
+      { label: "Tridakuten", stem: "sy" },
+      null, null
+    ]},
+    { name: "T family", base: "t", levels: [
+      { label: "Base", stem: "t" },
+      { label: "Dakuten", stem: "d" },
+      { label: "Duodakuten", stem: "ts" },
+      { label: "Tridakuten", stem: "ty" },
+      { label: "Quadakuten", stem: "dy" },
+      null
+    ]},
+    { name: "N family", base: "n", levels: [
+      { label: "Base", stem: "n" },
+      null, null,
+      { label: "Tridakuten", stem: "ny" },
+      null, null
+    ]},
+    { name: "H family", base: "h", levels: [
+      { label: "Base", stem: "h" },
+      { label: "Dakuten", stem: "b" },
+      { label: "Duodakuten", stem: "p" },
+      { label: "Tridakuten", stem: "hy" },
+      { label: "Quadakuten", stem: "by" },
+      { label: "Quindakuten", stem: "py" }
+    ]},
+    { name: "M family", base: "m", levels: [
+      { label: "Base", stem: "m" },
+      null, null,
+      { label: "Tridakuten", stem: "my" },
+      null, null
+    ]},
+    { name: "R family", base: "r", levels: [
+      { label: "Base", stem: "r" },
+      { label: "Dakuten", stem: "y" },
+      { label: "Duodakuten", stem: "l" },
+      { label: "Tridakuten", stem: "ry" },
+      { label: "Quadakuten", stem: "ly" },
+      null
+    ]},
+    { name: "W family", base: "w", levels: [
+      { label: "Base", stem: "w" }, null, null, null, null, null
+    ]},
+    { name: "J family (zh / dj)", base: "j", levels: [
+      { label: "Base · zh", stem: "j", sound: "zh" },
+      { label: "Dakuten · dj", stem: "j", sound: "dj" },
+      { label: "Duodakuten · zh", stem: "jy", sound: "zh" },
+      { label: "Tridakuten · dj", stem: "jy", sound: "dj" },
+      null, null
+    ]},
+    { name: "F family", base: "f", levels: [
+      { label: "Base", stem: "f" },
+      { label: "Dakuten", stem: "v" },
+      null, null, null, null
+    ]},
+    { name: "C family (k / s)", base: "c", levels: [
+      { label: "Base · k", stem: "c", sound: "k" },
+      { label: "Dakuten · s", stem: "c", sound: "s" },
+      { label: "Duodakuten · k", stem: "cy", sound: "k" },
+      { label: "Tridakuten · s", stem: "cy", sound: "s" },
+      null, null
+    ]},
+    { name: "X family (z / gz)", base: "x", levels: [
+      { label: "Base · z", stem: "x", sound: "z" },
+      { label: "Dakuten · gz", stem: "x", sound: "gz" },
+      { label: "Duodakuten · z", stem: "xy", sound: "z" },
+      { label: "Tridakuten · gz", stem: "xy", sound: "gz" },
+      null, null
+    ]}
+  ];
+
+  const MOD_LEVELS = ["Base", "Dakuten", "Duodakuten", "Tridakuten", "Quadakuten", "Quindakuten"];
+  const syllables = new Map();
+
+  // Build explicit spellings for every consonant + vowel combination.
+  for (const family of FAMILIES) {
+    family.levels.forEach((level, levelIndex) => {
+      if (!level) return;
+      for (const vowel of VOWELS) {
+        const spelling = (level.stem + vowel).toLowerCase();
+        const key = spelling;
+        // When the same romanisation has different sounds, keep separate labelled entries.
+        const glyphLabel = level.sound
+          ? `[${spelling.toUpperCase()} · ${level.sound.toUpperCase()}]`
+          : `[${spelling.toUpperCase()}]`;
+        const entry = {
+          spelling, glyphLabel, family: family.name,
+          level: level.label, levelIndex, sound: level.sound || ""
+        };
+        if (!syllables.has(key)) syllables.set(key, []);
+        syllables.get(key).push(entry);
+      }
+    });
+  }
+
+  function vowelLabel(vowel, isLong = false) {
+    return `[${vowel.toUpperCase()}${isLong ? "—" : ""}]`;
+  }
+
+  function translate(input) {
+    let output = "";
+    let i = 0;
+    const text = input.toLowerCase();
+
+    while (i < text.length) {
+      const char = text[i];
+
+      // Prefer a consonant syllable with a doubled vowel first:
+      // e.g. kaa -> a long-A version of KA, shown as [KA—].
+      let matched = false;
+      for (let length = Math.min(3, text.length - i); length >= 1; length--) {
+        const stem = text.slice(i, i + length);
+        const doubledVowel = text[i + length];
+        if (!VOWELS.includes(doubledVowel) || text[i + length + 1] !== doubledVowel) continue;
+        const entries = syllables.get(stem + doubledVowel);
+        if (entries && entries.length) {
+          const labels = [...new Set(entries.map(entry => {
+            const baseLabel = entry.glyphLabel.replace(/]$/, "—]");
+            return baseLabel;
+          }))];
+          output += labels.join("/");
+          i += length + 2;
+          matched = true;
+          break;
+        }
+      }
+      if (matched) continue;
+
+      // Repeated standalone vowels form one long vowel (aa, uu, oo, ii, ee).
+      if (VOWELS.includes(char) && text[i + 1] === char) {
+        output += vowelLabel(char, true);
+        i += 2;
+        continue;
+      }
+
+      // Standalone vowels.
+      if (VOWELS.includes(char)) {
+        output += vowelLabel(char);
+        i++;
+        continue;
+      }
+
+      // Prefer the longest consonant+vowel spelling (e.g. kya, sha, dya).
+      let matchedSyllable = false;
+      for (let length = Math.min(3, text.length - i); length >= 2; length--) {
+        const candidate = text.slice(i, i + length);
+        const entries = syllables.get(candidate);
+        if (entries && entries.length) {
+          // Some spellings intentionally overlap in the source table. Display every
+          // distinct sound label so the ambiguity is visible rather than silently guessed.
+          const labels = [...new Set(entries.map(entry => entry.glyphLabel))];
+          output += labels.join("/");
+          i += length;
+          matchedSyllable = true;
+          break;
+        }
+      }
+      if (matchedSyllable) continue;
+
+      // Keep spaces, punctuation, digits, and unknown input unchanged.
+      output += input[i];
+      i++;
+    }
+    return output;
+  }
+
+  const source = document.getElementById("source");
+  const result = document.getElementById("result");
+  const status = document.getElementById("status");
+
+  function update() {
+    result.textContent = translate(source.value);
+    status.textContent = "";
+  }
+  source.addEventListener("input", update);
+
+  document.getElementById("clear").addEventListener("click", () => {
+    source.value = "";
+    update();
+    source.focus();
+  });
+
+  document.getElementById("example").addEventListener("click", () => {
+    source.value = "ka ku ko ki ke\nga gu go gi ge\nsha shu sho shi she\nkya kyu kyo kyi kye\npya pyu pyo pyi pye\naa uu oo ii ee";
+    update();
+  });
+
+  document.getElementById("copy").addEventListener("click", async () => {
+    const text = result.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = "Translation copied!";
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(result);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      status.textContent = "Clipboard access was blocked. Select the translation above and copy it manually.";
+    }
+  });
+
+  function makeReference() {
+    const container = document.getElementById("reference");
+    for (const family of FAMILIES) {
+      const card = document.createElement("article");
+      card.className = "family";
+      const heading = document.createElement("h3");
+      heading.textContent = family.name;
+      card.appendChild(heading);
+
+      family.levels.forEach((level, index) => {
+        const p = document.createElement("p");
+        if (!level) {
+          p.textContent = `${MOD_LEVELS[index]}: —`;
+        } else {
+          const syllableExamples = VOWELS.map(v => level.stem + v).join(", ");
+          p.textContent = `${level.label}${level.sound ? " (" + level.sound + ")" : ""}: ${syllableExamples}`;
+        }
+        card.appendChild(p);
+      });
+      const small = document.createElement("small");
+      small.textContent = "Placeholder labels are generated from these romanisations.";
+      card.appendChild(small);
+      container.appendChild(card);
+    }
+  }
+
+  makeReference();
+  update();
+</script>
+</body>
+</html>
